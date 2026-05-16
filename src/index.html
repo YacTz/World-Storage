@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'">
+<title>World Storage</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0c10; --panel:#0f1318; --border:#1e2530;
+    --accent:#00e5ff; --accent2:#ff6b35;
+    --green:#00ff88; --yellow:#ffd700; --red:#ff4466; --purple:#b388ff;
+    --text:#c8d6e5; --muted:#4a5568;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse at 20% 20%,rgba(0,229,255,.04) 0%,transparent 50%),
+               radial-gradient(ellipse at 80% 80%,rgba(255,107,53,.04) 0%,transparent 50%);}
+  .app{position:relative;z-index:1;}
+
+  /* HEADER */
+  header{background:var(--panel);border-bottom:1px solid var(--border);padding:14px 24px;
+    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;z-index:100;-webkit-app-region:drag;}
+  header *{-webkit-app-region:no-drag;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-family:'Share Tech Mono',monospace;font-size:15px;color:var(--bg);font-weight:bold;}
+  .logo-text{font-size:18px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#fff;}
+  .logo-text span{color:var(--accent);}
+  .header-right{display:flex;align-items:center;gap:24px;}
+  .header-stats{display:flex;gap:20px;}
+  .stat-item{text-align:center;font-family:'Share Tech Mono',monospace;}
+  .stat-num{font-size:20px;color:var(--accent);line-height:1;}
+  .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .db-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-family:'Share Tech Mono',monospace;
+    color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:4px 10px;border-radius:6px;cursor:pointer;}
+  .db-badge:hover{border-color:var(--accent);color:var(--accent);}
+  .db-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+
+  /* TOOLBAR */
+  .toolbar{padding:12px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    border-bottom:1px solid var(--border);background:rgba(15,19,24,.97);
+    position:sticky;top:62px;z-index:99;backdrop-filter:blur(10px);}
+  .search-box{position:relative;flex:1;min-width:180px;}
+  .search-box input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:9px 14px 9px 38px;border-radius:8px;font-family:'Share Tech Mono',monospace;
+    font-size:13px;outline:none;transition:border-color .2s;}
+  .search-box input:focus{border-color:var(--accent);}
+  .search-box::before{content:'⌕';position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:17px;}
+  .filter-btns{display:flex;gap:6px;}
+  .filter-btn{padding:7px 13px;border-radius:6px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;}
+  .filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .filter-btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+  .toolbar-right{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
+  .btn-io{padding:7px 13px;border-radius:6px;border:1px solid var(--border);background:transparent;
+    color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;
+    cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;}
+  .btn-io:hover{border-color:var(--accent2);color:var(--accent2);}
+  .btn-select{padding:7px 13px;border-radius:6px;border:1px solid var(--accent2);background:transparent;
+    color:var(--accent2);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;}
+  .btn-select.active{background:var(--accent2);color:#fff;}
+  .btn-add{padding:9px 16px;background:linear-gradient(135deg,var(--accent),#0099bb);border:none;
+    border-radius:8px;color:var(--bg);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;
+    cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:opacity .2s;white-space:nowrap;}
+  .btn-add:hover{opacity:.85;}
+  .btn-import-txt{background:linear-gradient(135deg,#1a5c2a,#0d3d1a)!important;border:1px solid var(--green)!important;color:var(--green)!important;}
+
+  /* MAIN */
+  .main{padding:18px 24px;}
+  .category-section{margin-bottom:24px;animation:fadeIn .3s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .cat-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+  .cat-dot{width:10px;height:10px;border-radius:50%;}
+  .cat-title{font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+  .cat-count{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);
+    background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:4px;}
+  .table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);}
+  .world-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .world-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
+  .world-table th{background:var(--bg);color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;
+    font-size:10px;font-weight:600;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border);}
+  .world-table td{padding:8px 14px;border-bottom:1px solid rgba(30,37,48,.6);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .world-table th:nth-child(1),.world-table td:nth-child(1){width:70px;}
+  .world-table th:nth-child(2),.world-table td:nth-child(2){width:200px;}
+  .world-table th:nth-child(3),.world-table td:nth-child(3){width:110px;}
+  .world-table th:nth-child(4),.world-table td:nth-child(4){width:110px;}
+  .world-table th:nth-child(5),.world-table td:nth-child(5){width:160px;}
+  .world-table th:nth-child(6),.world-table td:nth-child(6){width:120px;}
+  .world-table tr:hover td{background:rgba(0,229,255,.03);}
+  .world-code{font-family:'Share Tech Mono',monospace;font-size:13px;color:#fff;letter-spacing:.5px;}
+  .seed-badge{display:inline-block;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;}
+  .seed-Seed{background:rgba(0,255,136,.1);color:var(--green);}
+  .seed-Block{background:rgba(255,215,0,.1);color:var(--yellow);}
+  .cat-badge{display:inline-block;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+  .action-btns{display:flex;gap:5px;}
+  .btn-edit,.btn-del{padding:3px 9px;border-radius:4px;border:1px solid;background:transparent;
+    font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;cursor:pointer;transition:all .15s;
+    text-transform:uppercase;letter-spacing:.5px;}
+  .btn-edit{border-color:var(--accent);color:var(--accent);}
+  .btn-edit:hover{background:var(--accent);color:var(--bg);}
+  .btn-del{border-color:var(--red);color:var(--red);}
+  .btn-del:hover{background:var(--red);color:#fff;}
+  .row-num{color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;white-space:nowrap;}
+
+  /* SELECT MODE */
+  body.select-mode .world-table tbody tr{cursor:pointer;user-select:none;}
+  body.select-mode .world-table tbody tr:hover td{background:rgba(255,107,53,.06);}
+  body.select-mode .world-table tbody tr.selected td{background:rgba(255,107,53,.15)!important;border-bottom-color:rgba(255,107,53,.3);}
+  body.select-mode .world-table tbody tr.selected .world-code{color:var(--accent2);}
+  .sel-indicator{display:none;width:14px;height:14px;border-radius:3px;border:2px solid var(--muted);transition:all .15s;vertical-align:middle;margin-right:6px;}
+  body.select-mode .sel-indicator{display:inline-block;text-align:center;line-height:14px;}
+  .selected .sel-indicator{background:var(--accent2);border-color:var(--accent2);}
+  .selected .sel-indicator::after{content:'✓';font-size:9px;color:#fff;font-weight:bold;}
+
+  /* SELECT BAR */
+  .select-bar{display:none;position:sticky;bottom:0;z-index:90;
+    background:#1a1200;border-top:2px solid var(--accent2);
+    padding:10px 24px;align-items:center;gap:14px;}
+  .select-bar.show{display:flex;}
+  .select-info{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--accent2);flex:1;}
+  .btn-copy-sel{padding:9px 18px;background:linear-gradient(135deg,var(--accent2),#cc4400);border:none;
+    border-radius:8px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;
+    cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:opacity .2s;}
+  .btn-copy-sel:hover{opacity:.85;}
+  .btn-clear-sel{padding:9px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;
+    color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;cursor:pointer;
+    text-transform:uppercase;letter-spacing:1px;transition:all .2s;}
+  .btn-clear-sel:hover{border-color:var(--red);color:var(--red);}
+
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+    z-index:200;display:flex;align-items:center;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .2s;}
+  .modal-overlay.show{opacity:1;pointer-events:all;}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:26px;
+    width:100%;max-width:440px;transform:translateY(20px);transition:transform .2s;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  .modal-overlay.show .modal{transform:translateY(0);}
+  .modal h2{font-size:17px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:18px;}
+  .form-group{margin-bottom:14px;}
+  .form-group label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+  .form-group input,.form-group select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+    padding:9px 12px;border-radius:8px;font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;transition:border-color .2s;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--accent);}
+  .form-group select option{background:#1a2030;}
+  .modal-btns{display:flex;gap:10px;margin-top:20px;}
+  .btn-save{flex:1;padding:11px;background:linear-gradient(135deg,var(--accent),#0099bb);border:none;
+    border-radius:8px;color:var(--bg);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;
+    cursor:pointer;letter-spacing:1px;text-transform:uppercase;}
+  .btn-cancel{flex:1;padding:11px;background:transparent;border:1px solid var(--border);border-radius:8px;
+    color:var(--muted);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;
+    cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:border-color .2s;}
+  .btn-cancel:hover{border-color:var(--red);color:var(--red);}
+
+  /* FILTER MODAL */
+  .filter-cat-card{display:flex;align-items:center;gap:10px;padding:11px 13px;
+    border-radius:8px;border:2px solid var(--border);background:var(--bg);
+    cursor:pointer;transition:all .15s;user-select:none;}
+  .filter-cat-card:hover{border-color:#ffffff33;background:rgba(255,255,255,.04);}
+  .filter-cat-card.selected{border-color:var(--card-color);background:color-mix(in srgb,var(--card-color) 12%,transparent);}
+  .filter-cat-card .card-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .filter-cat-card .card-name{font-weight:700;font-size:14px;flex:1;letter-spacing:.5px;}
+  .filter-cat-card .card-count{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);}
+  .filter-cat-card.selected .card-name{color:var(--card-color);}
+
+  /* IMPORT */
+  .import-stat-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 12px;text-align:center;font-family:'Share Tech Mono',monospace;}
+  .import-stat-box .n{font-size:18px;color:var(--accent);}
+  .import-stat-box .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+  /* CAT LIST */
+  .cat-list-item{display:flex;align-items:center;gap:10px;padding:9px 12px;
+    background:var(--bg);border:1px solid var(--border);border-radius:8px;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--green);color:var(--bg);padding:9px 22px;border-radius:8px;
+    font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;
+    opacity:0;transition:all .3s;z-index:999;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.error{background:var(--red);color:#fff;}
+
+  /* EMPTY / LOADING */
+  .loading{text-align:center;padding:60px;color:var(--muted);}
+  .spin{display:inline-block;width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:10px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .no-results{text-align:center;padding:60px;color:var(--muted);}
+  .no-results .big{font-size:44px;margin-bottom:8px;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">WS</div>
+      <div class="logo-text">World <span>Storage</span></div>
+    </div>
+    <div class="header-right">
+      <div class="db-badge" onclick="showDbPath()" title="Klik untuk lihat lokasi database">
+        <div class="db-dot"></div>
+        <span>SQLite ⓘ</span>
+      </div>
+      <div class="header-stats">
+        <div class="stat-item"><div class="stat-num" id="totalCount">0</div><div class="stat-label">Total</div></div>
+        <div class="stat-item"><div class="stat-num" id="catCount">0</div><div class="stat-label">Kategori</div></div>
+        <div class="stat-item"><div class="stat-num" id="availCount">0</div><div class="stat-label">Empty</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Cari world code..." oninput="renderTable()">
+    </div>
+    <div class="filter-btns">
+      <button class="filter-btn active" id="btnFilterAll" onclick="setFilter('All')">Semua</button>
+      <button class="filter-btn" id="btnFilterCat" onclick="openFilterModal()">☰ Pilih Kategori ▼</button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-select" id="selectModeBtn" onclick="toggleSelectMode()">☐ Select Mode</button>
+      <button class="btn-io" onclick="openManageCat()">⚙ Kategori</button>
+      <button class="btn-io" onclick="exportData()">⬇ Export</button>
+      <button class="btn-add btn-import-txt" onclick="openImportTxt()">⬆ Import TXT/CSV</button>
+      <button class="btn-add" onclick="openModal()">+ Tambah World</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="mainContent">
+    <div class="loading"><div class="spin"></div><br>Memuat database...</div>
+  </div>
+
+  <!-- SELECT BAR -->
+  <div class="select-bar" id="selectBar">
+    <div class="select-info" id="selectInfo">0 world dipilih</div>
+    <button class="btn-clear-sel" onclick="selectAll()">Pilih Semua</button>
+    <button class="btn-clear-sel" onclick="clearSelection()">Batal Semua</button>
+    <button class="btn-copy-sel" onclick="copySelected()">⧉ Copy yang Dipilih</button>
+    <button class="btn-copy-sel" onclick="deleteSelected()" style="background:linear-gradient(135deg,var(--red),#aa0022)">🗑 Hapus yang Dipilih</button>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- FILTER MODAL -->
+<div class="modal-overlay" id="filterModalOverlay">
+  <div class="modal" style="max-width:480px">
+    <h2>☰ Pilih Kategori</h2>
+    <input type="text" id="filterSearch" placeholder="Cari kategori..." oninput="renderFilterModal()"
+      style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 14px;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;margin-bottom:14px">
+    <div id="filterCatGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-height:340px;overflow-y:auto"></div>
+    <div class="modal-btns" style="margin-top:18px">
+      <button class="btn-cancel" onclick="resetFilter()">Reset</button>
+      <button class="btn-save" onclick="closeFilterModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT WORLD MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Tambah World</h2>
+    <div class="form-group">
+      <label>World Code *</label>
+      <input type="text" id="fCode" placeholder="Contoh: WORLD|ID" style="text-transform:uppercase">
+    </div>
+    <div class="form-group">
+      <label>Kategori *</label>
+      <select id="fCat"></select>
+    </div>
+    <div class="form-group">
+      <label>Seed / Block</label>
+      <select id="fSeed">
+        <option value="">— Tidak ada —</option>
+        <option value="Seed">Seed</option>
+        <option value="Block">Block</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Catatan (opsional)</label>
+      <input type="text" id="fNote" placeholder="Catatan tambahan...">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-save" onclick="saveWorld()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT TXT MODAL -->
+<div class="modal-overlay" id="importTxtOverlay">
+  <div class="modal" style="max-width:500px">
+    <h2>⬆ Import TXT / CSV</h2>
+    <div style="margin-bottom:14px;padding:10px 14px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:8px;font-size:13px;color:var(--muted);line-height:1.7">
+      <div style="margin-bottom:4px"><span style="color:var(--accent);font-weight:700">TXT</span> — world code saja, pilih kategori & seed manual</div>
+      <div><span style="color:var(--green);font-weight:700">CSV</span> — otomatis baca kategori, seed & catatan dari file</div>
+    </div>
+    <div class="form-group">
+      <label>Pilih File TXT atau CSV</label>
+      <input type="file" id="importTxtFile" accept=".txt,.csv" style="color:var(--text);padding:8px;font-family:'Rajdhani',sans-serif" onchange="previewImport(event)">
+    </div>
+    <div id="importManualSection">
+    <div class="form-group">
+      <label>Kategori *</label>
+      <select id="importCat"></select>
+    </div>
+    <div class="form-group">
+      <label>Seed / Block default (opsional)</label>
+      <select id="importSeed">
+        <option value="">— Tidak ada —</option>
+        <option value="Seed">Seed</option>
+        <option value="Block">Block</option>
+      </select>
+    </div>
+    </div>
+    <div id="importPreview" style="display:none;margin-bottom:14px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Preview — Akan Diimport</div>
+      <div id="importStats" style="display:flex;gap:12px;margin-bottom:10px"></div>
+      <div id="importPreviewList" style="max-height:130px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.8"></div>
+
+      <div id="importDupeSection" style="display:none;margin-top:10px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);margin-bottom:6px;font-weight:600">⚠ World Duplikat (dilewati)</div>
+        <div id="importDupeList" style="max-height:100px;overflow-y:auto;background:var(--bg);border:1px solid rgba(255,68,102,.3);border-radius:6px;padding:10px;font-family:'Share Tech Mono',monospace;font-size:12px;line-height:1.8"></div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeImportTxt()">Batal</button>
+      <button class="btn-save" id="btnDoImport" onclick="doImportTxt()" disabled style="opacity:.4">Import Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="exportModalOverlay">
+  <div class="modal" style="max-width:420px">
+    <h2>⬇ Export World</h2>
+
+    <div class="form-group">
+      <label>Filter Kategori</label>
+      <select id="exportCatFilter" onchange="updateExportCount()">
+        <option value="All">Semua Kategori</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:16px;padding:10px 14px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:8px;font-size:12px;color:var(--muted);line-height:1.8">
+      <div style="margin-bottom:4px"><span style="color:var(--accent);font-family:'Share Tech Mono',monospace">TXT</span> — world code saja, satu per baris</div>
+      <div><span style="color:var(--green);font-family:'Share Tech Mono',monospace">CSV</span> — lengkap dengan kategori, seed & catatan</div>
+    </div>
+
+    <div id="exportCount" style="text-align:center;font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--muted);margin-bottom:16px"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="doExport('txt')"
+        style="padding:14px;background:rgba(0,229,255,.1);border:2px solid var(--accent);border-radius:8px;color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px"
+        onmouseover="this.style.background='var(--accent)';this.style.color='var(--bg)'"
+        onmouseout="this.style.background='rgba(0,229,255,.1)';this.style.color='var(--accent)'">
+        📄 TXT
+      </button>
+      <button onclick="doExport('csv')"
+        style="padding:14px;background:rgba(0,255,136,.1);border:2px solid var(--green);border-radius:8px;color:var(--green);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px"
+        onmouseover="this.style.background='var(--green)';this.style.color='var(--bg)'"
+        onmouseout="this.style.background='rgba(0,255,136,.1)';this.style.color='var(--green)'">
+        📊 CSV
+      </button>
+    </div>
+
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-cancel" onclick="closeExportModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE CATEGORY MODAL -->
+<div class="modal-overlay" id="manageCatOverlay">
+  <div class="modal" style="max-width:460px">
+    <h2>⚙ Kelola Kategori</h2>
+    <div style="display:flex;gap:8px;margin-bottom:18px">
+      <input type="text" id="newCatName" placeholder="Nama kategori baru..."
+        style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:'Rajdhani',sans-serif;font-size:14px;outline:none"
+        onkeydown="if(event.key==='Enter')addCategory()">
+      <input type="color" id="newCatColor" value="#00e5ff"
+        style="width:42px;height:40px;border:1px solid var(--border);border-radius:8px;background:var(--bg);cursor:pointer;padding:2px">
+      <button class="btn-save" style="padding:9px 14px;white-space:nowrap" onclick="addCategory()">+ Tambah</button>
+    </div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;font-weight:600">Kategori Saat Ini</div>
+    <div id="catList" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-btns" style="margin-top:18px">
+      <button class="btn-cancel" onclick="closeManageCat()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let worlds = [], categories = [];
+let filter = 'All', editId = null;
+let selectMode = false, selectedIds = new Set(), lastClickedId = null;
+let importParsed = [];
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+async function loadAll() {
+  try {
+    [worlds, categories] = await Promise.all([window.db.getWorlds(), window.db.getCategories()]);
+    populateCatSelects();
+    renderTable();
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML =
+      `<div class="no-results"><div class="big">⚠️</div>Error: ${e.message}</div>`;
+  }
+}
+
+async function showDbPath() {
+  const dbPath = await window.db.getDbPath();
+  const configPath = await window.db.getConfigPath();
+  alert(`📁 Lokasi Database:\n${dbPath}\n\n⚙ File Config:\n${configPath}\n\nEdit file config.json untuk mengubah lokasi database.`);
+}
+
+// ═══════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════
+function getCatColor(name) {
+  const c = categories.find(c=>c.name===name);
+  return c ? c.color : '#aaa';
+}
+
+function renderTable() {
+  const search = document.getElementById('searchInput').value.trim().toUpperCase();
+  const filtered = worlds.filter(w => {
+    const ms = !search || w.code.includes(search) || w.category.toUpperCase().includes(search);
+    const mf = filter==='All' || w.category===filter;
+    return ms && mf;
+  });
+
+  document.getElementById('totalCount').textContent = worlds.length;
+  document.getElementById('catCount').textContent = categories.length;
+  document.getElementById('availCount').textContent = worlds.filter(w=>w.category==='Empty').length;
+
+  const btnAll = document.getElementById('btnFilterAll');
+  const btnCat = document.getElementById('btnFilterCat');
+  btnAll.classList.toggle('active', filter==='All');
+  if (filter !== 'All') {
+    const color = getCatColor(filter);
+    const count = worlds.filter(w=>w.category===filter).length;
+    btnCat.style.cssText = `border-color:${color};color:${color};background:${color}22`;
+    btnCat.textContent = `${filter} (${count}) ▼`;
+  } else {
+    btnCat.style.cssText = '';
+    btnCat.textContent = '☰ Pilih Kategori ▼';
+  }
+
+  if (!filtered.length) {
+    document.getElementById('mainContent').innerHTML = '<div class="no-results"><div class="big">🔍</div>Tidak ada world ditemukan</div>';
+    return;
+  }
+
+  const groups = {};
+  filtered.forEach(w => { if(!groups[w.category]) groups[w.category]=[]; groups[w.category].push(w); });
+
+  document.getElementById('mainContent').innerHTML = Object.keys(groups).sort().map(cat => {
+    const color = getCatColor(cat);
+    const list = groups[cat];
+    return `<div class="category-section">
+      <div class="cat-header">
+        <div class="cat-dot" style="background:${color}"></div>
+        <div class="cat-title" style="color:${color}">${cat}</div>
+        <div class="cat-count">${list.length} world</div>
+      </div>
+      <div class="table-wrap">
+        <table class="world-table">
+          <thead><tr><th>NO</th><th>World Code</th><th>Seed / Block</th><th>Kategori</th><th>Catatan</th><th>Aksi</th></tr></thead>
+          <tbody>${list.map((w,i)=>`
+            <tr data-id="${w.id}" onclick="handleRowClick(event,${w.id})">
+              <td class="row-num"><span class="sel-indicator"></span><span>${i+1}</span></td>
+              <td><span class="world-code">${w.code}</span></td>
+              <td>${w.seed?`<span class="seed-badge seed-${w.seed}">${w.seed}</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+              <td><span class="cat-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${w.category}</span></td>
+              <td style="color:var(--muted);font-size:12px">${w.note||'—'}</td>
+              <td><div class="action-btns">
+                <button class="btn-edit" onclick="openEdit(${w.id})">Edit</button>
+                <button class="btn-del" onclick="delWorld(${w.id})">Hapus</button>
+              </div></td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+
+  selectedIds.forEach(id => {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (row) row.classList.add('selected');
+  });
+}
+
+// ═══════════════════════════════════════════
+//  FILTER
+// ═══════════════════════════════════════════
+function setFilter(cat) { filter=cat; renderTable(); }
+function resetFilter() { filter='All'; closeFilterModal(); renderTable(); }
+function openFilterModal() { document.getElementById('filterSearch').value=''; renderFilterModal(); document.getElementById('filterModalOverlay').classList.add('show'); }
+function closeFilterModal() { document.getElementById('filterModalOverlay').classList.remove('show'); }
+function renderFilterModal() {
+  const s = document.getElementById('filterSearch').value.trim().toLowerCase();
+  const list = categories.filter(c=>!s||c.name.toLowerCase().includes(s));
+  document.getElementById('filterCatGrid').innerHTML = list.map(c=>{
+    const count = worlds.filter(w=>w.category===c.name).length;
+    const sel = filter===c.name;
+    return `<div class="filter-cat-card ${sel?'selected':''}" style="--card-color:${c.color}" onclick="selectCatFilter('${c.name}')">
+      <div class="card-dot" style="background:${c.color}"></div>
+      <div class="card-name">${c.name}</div>
+      <div class="card-count">${count}</div>
+      ${sel?`<span style="color:${c.color}">✓</span>`:''}
+    </div>`;
+  }).join('') || '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted)">Tidak ada kategori</div>';
+}
+function selectCatFilter(cat) { filter=cat; closeFilterModal(); renderTable(); }
+
+// ═══════════════════════════════════════════
+//  WORLDS CRUD
+// ═══════════════════════════════════════════
+function populateCatSelects() {
+  const opts = categories.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  ['fCat','importCat'].forEach(id=>{ const el=document.getElementById(id); if(el){const p=el.value;el.innerHTML=opts;if(p)el.value=p;} });
+}
+
+function openModal() {
+  editId=null; populateCatSelects();
+  document.getElementById('modalTitle').textContent='Tambah World';
+  document.getElementById('fCode').value='';
+  document.getElementById('fCat').value=categories[0]?.name||'';
+  document.getElementById('fSeed').value='';
+  document.getElementById('fNote').value='';
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function openEdit(id) {
+  const w=worlds.find(x=>x.id===id); if(!w) return;
+  editId=id; populateCatSelects();
+  document.getElementById('modalTitle').textContent='Edit World';
+  document.getElementById('fCode').value=w.code;
+  document.getElementById('fCat').value=w.category;
+  document.getElementById('fSeed').value=w.seed||'';
+  document.getElementById('fNote').value=w.note||'';
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+async function saveWorld() {
+  const payload = {
+    code: document.getElementById('fCode').value.trim().toUpperCase(),
+    category: document.getElementById('fCat').value,
+    seed: document.getElementById('fSeed').value,
+    note: document.getElementById('fNote').value.trim()
+  };
+  if (!payload.code) { showToast('World code tidak boleh kosong!',true); return; }
+  try {
+    if (editId) {
+      const updated = await window.db.updateWorld(editId, payload);
+      worlds = worlds.map(w=>w.id===editId?updated:w);
+    } else {
+      const added = await window.db.addWorld(payload);
+      worlds.push(added);
+    }
+    closeModal(); renderTable();
+    showToast(editId?'✓ World diupdate!':'✓ World ditambahkan!');
+  } catch(e) { showToast(e.message, true); }
+}
+
+async function delWorld(id) {
+  const w=worlds.find(x=>x.id===id);
+  if (!confirm(`Hapus world "${w?.code}"?`)) return;
+  try {
+    await window.db.deleteWorld(id);
+    worlds=worlds.filter(x=>x.id!==id);
+    selectedIds.delete(id);
+    renderTable(); showToast('✓ World dihapus!');
+  } catch(e) { showToast(e.message,true); }
+}
+
+// ═══════════════════════════════════════════
+//  SELECT MODE
+// ═══════════════════════════════════════════
+function toggleSelectMode() {
+  selectMode=!selectMode;
+  document.body.classList.toggle('select-mode',selectMode);
+  const btn=document.getElementById('selectModeBtn');
+  btn.classList.toggle('active',selectMode);
+  btn.textContent=selectMode?'✕ Exit Select':'☐ Select Mode';
+  if (!selectMode) clearSelection();
+  updateSelectBar();
+}
+function selectAll() {
+  // Hanya select world yang sedang tampil (sesuai filter aktif)
+  const visibleRows = [...document.querySelectorAll('.world-table tbody tr')];
+  visibleRows.forEach(row => {
+    const id = Number(row.dataset.id);
+    selectedIds.add(id);
+    row.classList.add('selected');
+  });
+  updateSelectBar();
+}
+
+function handleRowClick(e, id) {
+  if (!selectMode) return;
+  if (e.target.classList.contains('btn-edit') || e.target.classList.contains('btn-del')) return;
+
+  const allRows = [...document.querySelectorAll('.world-table tbody tr')];
+  const ids = allRows.map(r => Number(r.dataset.id));
+
+  if (e.shiftKey && lastClickedId !== null) {
+    // Range select: dari lastClickedId ke id yang diklik
+    const fromIdx = ids.indexOf(lastClickedId);
+    const toIdx = ids.indexOf(id);
+    const [start, end] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+
+    // Clear semua selection dulu, lalu select range baru
+    selectedIds.clear();
+    ids.slice(start, end + 1).forEach(rid => selectedIds.add(rid));
+  } else {
+    // Click biasa: toggle
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    lastClickedId = id;
+  }
+
+  // Sync visual
+  document.querySelectorAll('.world-table tbody tr').forEach(row => {
+    row.classList.toggle('selected', selectedIds.has(Number(row.dataset.id)));
+  });
+
+  updateSelectBar();
+}
+async function deleteSelected() {
+  if (!selectedIds.size) return;
+  const count = selectedIds.size;
+  if (!confirm(`Hapus ${count} world yang dipilih?\nTindakan ini tidak bisa dibatalkan!`)) return;
+  try {
+    for (const id of [...selectedIds]) {
+      await window.db.deleteWorld(id);
+    }
+    worlds = worlds.filter(w => !selectedIds.has(w.id));
+    const deletedCount = count;
+    clearSelection();
+    if (selectMode) toggleSelectMode();
+    renderTable();
+    showToast(`✓ ${deletedCount} world berhasil dihapus!`);
+  } catch(e) { showToast(e.message, true); }
+}
+
+function updateSelectBar() {
+  const bar = document.getElementById('selectBar');
+  bar.classList.toggle('show', selectMode);
+  document.getElementById('selectInfo').textContent = selectedIds.size > 0
+    ? `${selectedIds.size} world dipilih`
+    : 'Belum ada yang dipilih';
+}
+function clearSelection() {
+  selectedIds.clear(); lastClickedId=null;
+  document.querySelectorAll('.world-table tbody tr.selected').forEach(r=>r.classList.remove('selected'));
+  updateSelectBar();
+}
+function copySelected() {
+  const codes=worlds.filter(w=>selectedIds.has(w.id)).map(w=>w.code);
+  if (!codes.length) return;
+  navigator.clipboard.writeText(codes.join('\n')).then(()=>{showToast(`✓ ${codes.length} world code ter-copy!`);clearSelection();});
+}
+
+// ═══════════════════════════════════════════
+//  IMPORT TXT/CSV
+// ═══════════════════════════════════════════
+function openImportTxt() {
+  importParsed=[]; populateCatSelects();
+  document.getElementById('importTxtFile').value='';
+  document.getElementById('importSeed').value='';
+  document.getElementById('importPreview').style.display='none';
+  document.getElementById('importDupeSection').style.display='none';
+  const btn=document.getElementById('btnDoImport');
+  btn.disabled=true; btn.style.opacity='.4'; btn.textContent='Import Sekarang';
+  document.getElementById('importTxtOverlay').classList.add('show');
+}
+function closeImportTxt() { document.getElementById('importTxtOverlay').classList.remove('show'); }
+function previewImport(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const isCsv = file.name.endsWith('.csv');
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const lines=ev.target.result.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const existing=new Set(worlds.map(w=>w.code.toUpperCase()));
+    importParsed=[]; const dupes=[];
+
+    lines.forEach(line=>{
+      const parts=line.split(',').map(p=>p.trim());
+      const code=parts[0].toUpperCase();
+      if (!code) return;
+      if (existing.has(code)){dupes.push(code);return;}
+
+      if (isCsv && parts.length >= 3) {
+        // CSV format: code, category, seed, note
+        importParsed.push({
+          code,
+          category: parts[1]||'',
+          seed: parts[2]||'',
+          note: parts[3]||''
+        });
+      } else {
+        // TXT format: code only
+        importParsed.push({code, category:'', seed:'', note:''});
+      }
+      existing.add(code);
+    });
+
+    // Show/hide manual category & seed based on file type
+    const manualSection = document.getElementById('importManualSection');
+    manualSection.style.display = isCsv ? 'none' : 'block';
+
+    document.getElementById('importPreview').style.display='block';
+    document.getElementById('importStats').innerHTML=`
+      <div class="import-stat-box"><div class="n">${lines.length}</div><div class="l">Total</div></div>
+      <div class="import-stat-box"><div class="n" style="color:var(--green)">${importParsed.length}</div><div class="l">Diimport</div></div>
+      <div class="import-stat-box"><div class="n" style="color:var(--red)">${dupes.length}</div><div class="l">Duplikat</div></div>`;
+    document.getElementById('importPreviewList').innerHTML=
+      importParsed.slice(0,50).map(w=>`
+        <div>
+          ${w.code}
+          ${w.category?`<span style="color:var(--accent)">[${w.category}]</span>`:''}
+          ${w.seed?`<span style="color:var(--green)">[${w.seed}]</span>`:''}
+          ${w.note?`<span style="color:var(--muted)">// ${w.note}</span>`:''}
+        </div>`).join('')+
+      (importParsed.length>50?`<div style="color:var(--muted)">...dan ${importParsed.length-50} lainnya</div>`:'');
+
+    // Show duplicate list
+    const dupeSection = document.getElementById('importDupeSection');
+    const dupeList = document.getElementById('importDupeList');
+    if (dupes.length > 0) {
+      dupeSection.style.display = 'block';
+      dupeList.innerHTML = dupes.slice(0,50).map(code =>
+        `<div style="color:var(--red)">${code}</div>`
+      ).join('') + (dupes.length>50?`<div style="color:var(--muted)">...dan ${dupes.length-50} lainnya</div>`:'');
+    } else {
+      dupeSection.style.display = 'none';
+    }
+    const btn=document.getElementById('btnDoImport');
+    btn.disabled=!importParsed.length; btn.style.opacity=importParsed.length?'1':'.4';
+    btn.textContent=importParsed.length?`Import ${importParsed.length} World`:'Import Sekarang';
+  };
+  reader.readAsText(file);
+}
+
+async function doImportTxt() {
+  if (!importParsed.length) return;
+  const isCsv = document.getElementById('importTxtFile').files[0]?.name.endsWith('.csv');
+  const defCat = document.getElementById('importCat').value;
+  const defSeed = document.getElementById('importSeed').value;
+
+  const items = importParsed.map(w=>({
+    code: w.code,
+    category: isCsv && w.category ? w.category : defCat,
+    seed: isCsv ? w.seed : (w.seed || defSeed),
+    note: w.note||''
+  }));
+
+  try {
+    const res=await window.db.bulkAdd(items);
+    await loadAll(); closeImportTxt();
+    showToast(`✓ ${res.added} world diimport! (${res.skipped} duplikat)`);
+  } catch(e) { showToast(e.message,true); }
+}
+
+// ═══════════════════════════════════════════
+//  CATEGORIES
+// ═══════════════════════════════════════════
+function openManageCat() { renderCatList(); document.getElementById('newCatName').value=''; document.getElementById('newCatColor').value='#00e5ff'; document.getElementById('manageCatOverlay').classList.add('show'); }
+function closeManageCat() { document.getElementById('manageCatOverlay').classList.remove('show'); }
+function renderCatList() {
+  document.getElementById('catList').innerHTML=categories.map(c=>{
+    const count=worlds.filter(w=>w.category===c.name).length;
+    return `<div class="cat-list-item" style="border-left:3px solid ${c.color}">
+      <input type="color" value="${c.color}" onchange="updateCatColor(${c.id},this.value)"
+        style="width:26px;height:26px;border:none;border-radius:4px;background:none;cursor:pointer;padding:0;flex-shrink:0">
+      <span style="flex:1;font-weight:600;font-size:14px">${c.name}</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted)">${count} world</span>
+      ${!c.is_default
+        ?`<button onclick="deleteCat(${c.id})" style="padding:3px 9px;border-radius:4px;border:1px solid var(--red);background:transparent;color:var(--red);font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;cursor:pointer;text-transform:uppercase">Hapus</button>`
+        :`<span style="font-size:10px;color:var(--muted);padding:3px 8px">Default</span>`}
+    </div>`;
+  }).join('');
+}
+async function addCategory() {
+  const name=document.getElementById('newCatName').value.trim();
+  const color=document.getElementById('newCatColor').value;
+  if (!name){showToast('Nama kategori tidak boleh kosong!',true);return;}
+  try {
+    const cat=await window.db.addCategory({name,color});
+    categories.push(cat); document.getElementById('newCatName').value='';
+    renderCatList(); populateCatSelects(); renderTable();
+    showToast(`✓ Kategori "${name}" ditambahkan!`);
+  } catch(e){showToast(e.message,true);}
+}
+async function updateCatColor(id,color) {
+  try {
+    const updated=await window.db.updateCategory(id,{color});
+    categories=categories.map(c=>c.id===id?updated:c);
+    renderCatList(); renderTable();
+  } catch(e){showToast(e.message,true);}
+}
+async function deleteCat(id) {
+  const cat=categories.find(c=>c.id===id);
+  const count=worlds.filter(w=>w.category===cat?.name).length;
+  const msg=count>0?`Kategori "${cat.name}" berisi ${count} world.\nWorld-world akan dipindah ke "Empty". Lanjutkan?`:`Hapus kategori "${cat?.name}"?`;
+  if (!confirm(msg)) return;
+  try {
+    await window.db.deleteCategory(id);
+    categories=categories.filter(c=>c.id!==id);
+    if (filter===cat?.name) filter='All';
+    await loadAll(); renderCatList();
+    showToast(`✓ Kategori "${cat?.name}" dihapus!`);
+  } catch(e){showToast(e.message,true);}
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════
+function exportData() {
+  // Populate category filter
+  const sel = document.getElementById('exportCatFilter');
+  sel.innerHTML = '<option value="All">Semua Kategori</option>' +
+    categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  updateExportCount();
+  document.getElementById('exportModalOverlay').classList.add('show');
+}
+
+function updateExportCount() {
+  const cat = document.getElementById('exportCatFilter').value;
+  const count = cat === 'All' ? worlds.length : worlds.filter(w=>w.category===cat).length;
+  document.getElementById('exportCount').textContent = `${count} world akan diexport`;
+}
+
+function closeExportModal() {
+  document.getElementById('exportModalOverlay').classList.remove('show');
+}
+
+function doExport(type) {
+  const cat = document.getElementById('exportCatFilter').value;
+  const filtered = cat === 'All' ? worlds : worlds.filter(w => w.category === cat);
+
+  if (!filtered.length) { showToast('Tidak ada data untuk diexport!', true); return; }
+
+  let content, filename, mime;
+
+  if (type === 'txt') {
+    content = filtered.map(w => w.code).join('\n');
+    filename = `world-storage-${cat==='All'?'all':cat}-${new Date().toISOString().slice(0,10)}.txt`;
+    mime = 'text/plain';
+  } else {
+    content = filtered.map(w => `${w.code},${w.category},${w.seed||''},${w.note||''}`).join('\n');
+    filename = `world-storage-${cat==='All'?'all':cat}-${new Date().toISOString().slice(0,10)}.csv`;
+    mime = 'text/csv';
+  }
+
+  const blob = new Blob([content], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  closeExportModal();
+  showToast(`✓ ${filtered.length} world berhasil diexport sebagai ${type.toUpperCase()}!`);
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+function showToast(msg,isError=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(isError?' error':'');
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ═══════════════════════════════════════════
+//  MODAL CLOSE ON BACKDROP
+// ═══════════════════════════════════════════
+['filterModalOverlay','modalOverlay','importTxtOverlay','manageCatOverlay','exportModalOverlay'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+});
+
+// ═══════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════
+loadAll();
+</script>
+</body>
+</html>

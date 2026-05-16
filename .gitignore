@@ -1,0 +1,10 @@
+node_modules/
+World Storage/
+dist/
+*.db
+config.json
+*.lnk
+package-lock.json
+*.log
+.DS_Store
+Thumbs.db
