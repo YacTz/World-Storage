@@ -96,7 +96,7 @@ World-Storage/
 └── README.txt        - File ini
 
 ================================================
-  TEKNOLOGI
+  HOW IT'S BUILT
 ================================================
 
 - JavaScript, HTML, CSS  - tampilan & logika aplikasi
