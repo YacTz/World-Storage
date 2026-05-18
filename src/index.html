@@ -99,14 +99,22 @@
   .seed-Block{background:rgba(255,215,0,.1);color:var(--yellow);}
   .cat-badge{display:inline-block;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
   .action-btns{display:flex;gap:5px;}
-  .btn-edit,.btn-del{padding:3px 9px;border-radius:4px;border:1px solid;background:transparent;
+  .btn-edit,.btn-del,.btn-copy{padding:3px 9px;border-radius:4px;border:1px solid;background:transparent;
     font-size:11px;font-family:'Rajdhani',sans-serif;font-weight:600;cursor:pointer;transition:all .15s;
     text-transform:uppercase;letter-spacing:.5px;}
   .btn-edit{border-color:var(--accent);color:var(--accent);}
   .btn-edit:hover{background:var(--accent);color:var(--bg);}
   .btn-del{border-color:var(--red);color:var(--red);}
   .btn-del:hover{background:var(--red);color:#fff;}
-  .row-num{color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;white-space:nowrap;}
+  .btn-copy{border-color:var(--green);color:var(--green);}
+  .btn-copy:hover{background:var(--green);color:var(--bg);}
+  .btn-copy.copied{background:var(--green);color:var(--bg);}
+  .btn-censor{padding:7px 13px;border-radius:6px;border:1px solid var(--purple);background:transparent;
+    color:var(--purple);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+    cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px;}
+  .btn-censor:hover{background:rgba(179,136,255,.15);}
+  .btn-censor.active{background:var(--purple);color:var(--bg);}
+  .world-code.censored{letter-spacing:1px;color:var(--muted);}
 
   /* SELECT MODE */
   body.select-mode .world-table tbody tr{cursor:pointer;user-select:none;}
@@ -226,6 +234,7 @@
       <button class="filter-btn" id="btnFilterCat" onclick="openFilterModal()">☰ Pilih Kategori ▼</button>
     </div>
     <div class="toolbar-right">
+      <button class="btn-censor" id="censorBtn" onclick="toggleCensor()">👁 Sensor</button>
       <button class="btn-select" id="selectModeBtn" onclick="toggleSelectMode()">☐ Select Mode</button>
       <button class="btn-io" onclick="openManageCat()">⚙ Kategori</button>
       <button class="btn-io" onclick="exportData()">⬇ Export</button>
@@ -409,6 +418,24 @@ let worlds = [], categories = [];
 let filter = 'All', editId = null;
 let selectMode = false, selectedIds = new Set(), lastClickedId = null;
 let importParsed = [];
+let censorMode = false;
+
+function toggleCensor() {
+  censorMode = !censorMode;
+  const btn = document.getElementById('censorBtn');
+  btn.classList.toggle('active', censorMode);
+  btn.textContent = censorMode ? '🙈 Tersensor' : '👁 Sensor';
+  document.querySelectorAll('.world-code').forEach(el => {
+    if (censorMode) {
+      el.dataset.original = el.textContent;
+      el.textContent = '*'.repeat(el.textContent.length);
+      el.classList.add('censored');
+    } else {
+      el.textContent = el.dataset.original || el.textContent;
+      el.classList.remove('censored');
+    }
+  });
+}
 
 // ═══════════════════════════════════════════
 //  INIT
@@ -491,6 +518,7 @@ function renderTable() {
               <td><span class="cat-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${w.category}</span></td>
               <td style="color:var(--muted);font-size:12px">${w.note||'—'}</td>
               <td><div class="action-btns">
+                <button class="btn-copy" onclick="copyWorld(${w.id},this)">Copy</button>
                 <button class="btn-edit" onclick="openEdit(${w.id})">Edit</button>
                 <button class="btn-del" onclick="delWorld(${w.id})">Hapus</button>
               </div></td>
@@ -504,6 +532,15 @@ function renderTable() {
     const row = document.querySelector(`tr[data-id="${id}"]`);
     if (row) row.classList.add('selected');
   });
+
+  // Terapkan sensor jika aktif
+  if (censorMode) {
+    document.querySelectorAll('.world-code').forEach(el => {
+      el.dataset.original = el.textContent;
+      el.textContent = '*'.repeat(el.textContent.length);
+      el.classList.add('censored');
+    });
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -545,6 +582,16 @@ function openModal() {
   document.getElementById('fSeed').value='';
   document.getElementById('fNote').value='';
   document.getElementById('modalOverlay').classList.add('show');
+}
+
+function copyWorld(id, btn) {
+  const w = worlds.find(x=>x.id===id); if(!w) return;
+  navigator.clipboard.writeText(w.code).then(()=>{
+    btn.textContent='✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 1500);
+    showToast(`✓ "${w.code}" disalin!`);
+  }).catch(()=>showToast('Gagal menyalin!',true));
 }
 
 function openEdit(id) {
